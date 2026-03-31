@@ -12,15 +12,15 @@ export default function BottomNavigation() {
   const navItems = useMemo(() => {
     if (isAdmin) {
       return [
-        { path: '/admin/products', icon: 'shopping_bag', label: 'Produto' },
         { path: '/admin/clients', icon: 'group', label: 'Cliente' },
+        { path: '/admin/sales/new', icon: 'shopping_cart', label: 'Venda' },
         { path: '/admin/dashboard', icon: 'dashboard', label: 'Dashboard' },
         { path: '/admin/inventory', icon: 'inventory_2', label: 'Estoque' },
         { path: '/admin/finances', icon: 'payments', label: 'Finanças' },
       ];
     }
     return [
-      { path: '/catalog', icon: 'shopping_bag', label: 'Bolsas' },
+      { path: '/catalog', icon: 'inventory_2', label: 'Produtos' },
       { path: '/menu', icon: 'grid_view', label: 'Kits' },
       { path: '/home', icon: 'home', label: 'Home' },
       { path: '/contact', icon: 'wifi_tethering', label: 'Social' },

@@ -183,19 +183,19 @@ export default function Checkout() {
             <div className="grid grid-cols-3 gap-2">
               <button 
                 onClick={() => setPaymentOption('pix')}
-                className={`glass-button py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all ${paymentOption === 'pix' ? 'active' : ''}`}
+                className={`py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border ${paymentOption === 'pix' ? 'bg-secondary text-primary border-secondary shadow-[0_0_15px_rgba(244,192,37,0.3)]' : 'bg-primary/40 text-surface/60 border-transparent hover:bg-primary/60'}`}
               >
                 Pix
               </button>
               <button 
                 onClick={() => setPaymentOption('dinheiro')}
-                className={`glass-button py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all ${paymentOption === 'dinheiro' ? 'active' : ''}`}
+                className={`py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border ${paymentOption === 'dinheiro' ? 'bg-secondary text-primary border-secondary shadow-[0_0_15px_rgba(244,192,37,0.3)]' : 'bg-primary/40 text-surface/60 border-transparent hover:bg-primary/60'}`}
               >
                 Dinheiro
               </button>
               <button 
                 onClick={() => setPaymentOption('cartao')}
-                className={`glass-button py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all ${paymentOption === 'cartao' ? 'active' : ''}`}
+                className={`py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border ${paymentOption === 'cartao' ? 'bg-secondary text-primary border-secondary shadow-[0_0_15px_rgba(244,192,37,0.3)]' : 'bg-primary/40 text-surface/60 border-transparent hover:bg-primary/60'}`}
               >
                 Cartão
               </button>
@@ -206,13 +206,13 @@ export default function Checkout() {
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => setCardType('debito')}
-                    className={`glass-button py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all ${cardType === 'debito' ? 'active' : ''}`}
+                    className={`py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border ${cardType === 'debito' ? 'bg-secondary text-primary border-secondary shadow-[0_0_15px_rgba(244,192,37,0.3)]' : 'bg-primary/40 text-surface/60 border-transparent hover:bg-primary/60'}`}
                   >
                     Débito
                   </button>
                   <button 
                     onClick={() => setCardType('credito')}
-                    className={`glass-button py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all ${cardType === 'credito' ? 'active' : ''}`}
+                    className={`py-3 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all border ${cardType === 'credito' ? 'bg-secondary text-primary border-secondary shadow-[0_0_15px_rgba(244,192,37,0.3)]' : 'bg-primary/40 text-surface/60 border-transparent hover:bg-primary/60'}`}
                   >
                     Crédito
                   </button>

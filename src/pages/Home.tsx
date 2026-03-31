@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 import { useCartStore } from '../store/cartStore';
+import { supabase } from '../lib/supabase';
 import BottomNavigation from '../components/BottomNavigation';
 import Sidebar from '../components/Sidebar';
 
@@ -11,8 +12,64 @@ export default function Home() {
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [kits, setKits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [availableCategories, setAvailableCategories] = useState<Set<string>>(new Set(['bolsas'])); // Default to bolsas
   const addItem = useCartStore((state) => state.addItem);
   const totalItems = useCartStore((state) => state.getTotalItems());
+
+  useEffect(() => {
+    fetchHomeData();
+  }, []);
+
+  const fetchHomeData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch available categories
+      const { data: catData } = await supabase
+        .from('products')
+        .select('category')
+        .eq('published', true)
+        .gt('stock', 0);
+      
+      if (catData) {
+        const cats = new Set(catData.map(p => p.category?.toLowerCase()));
+        // Always include 'bolsas' if it has products or as a default if we want
+        setAvailableCategories(cats);
+      }
+
+      // Fetch featured products
+      const { data: featured, error: featuredError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('published', true)
+        .eq('featured', true)
+        .gt('stock', 0)
+        .limit(10);
+
+      if (featuredError) throw featuredError;
+      setFeaturedProducts(featured || []);
+
+      // Fetch kits
+      const { data: kitsData, error: kitsError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('published', true)
+        .eq('is_kit', true)
+        .eq('featured', true)
+        .gt('stock', 0)
+        .limit(5);
+
+      if (!kitsError) setKits(kitsData || []);
+
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!manualCarouselRef.current) return;
@@ -115,28 +172,37 @@ export default function Home() {
           <div className="flex overflow-x-auto no-scrollbar gap-4 px-6 md:justify-center">
             <Link to="/catalog" className="flex flex-col items-center gap-2 min-w-[60px]">
               <div className="w-14 h-14 rounded-full bg-secondary/10 flex items-center justify-center border border-secondary/5 glass-card">
-                <span className="material-symbols-outlined text-secondary text-xl">shopping_cart</span>
+                <span className="material-symbols-outlined text-secondary text-xl">shopping_bag</span>
               </div>
               <span className="text-[9px] uppercase tracking-[0.15em] text-surface/70">Bolsas</span>
             </Link>
-            <Link to="/catalog" className="flex flex-col items-center gap-2 min-w-[60px]">
-              <div className="w-14 h-14 rounded-full bg-secondary/5 flex items-center justify-center border border-secondary/5 glass-card">
-                <span className="material-symbols-outlined text-secondary/60 text-xl">business_center</span>
-              </div>
-              <span className="text-[9px] uppercase tracking-[0.15em] text-surface/40">Maletas</span>
-            </Link>
-            <Link to="/catalog" className="flex flex-col items-center gap-2 min-w-[60px]">
-              <div className="w-14 h-14 rounded-full bg-secondary/5 flex items-center justify-center border border-secondary/5 glass-card">
-                <span className="material-symbols-outlined text-secondary/60 text-xl">wallet</span>
-              </div>
-              <span className="text-[9px] uppercase tracking-[0.15em] text-surface/40">Carteiras</span>
-            </Link>
-            <Link to="/catalog" className="flex flex-col items-center gap-2 min-w-[60px]">
-              <div className="w-14 h-14 rounded-full bg-secondary/5 flex items-center justify-center border border-secondary/5 glass-card">
-                <span className="material-symbols-outlined text-secondary/60 text-xl">diamond</span>
-              </div>
-              <span className="text-[9px] uppercase tracking-[0.15em] text-surface/40">Acessórios</span>
-            </Link>
+            
+            {availableCategories.has('maletas') && (
+              <Link to="/maletas" className="flex flex-col items-center gap-2 min-w-[60px]">
+                <div className="w-14 h-14 rounded-full bg-secondary/5 flex items-center justify-center border border-secondary/5 glass-card">
+                  <span className="material-symbols-outlined text-secondary/60 text-xl">business_center</span>
+                </div>
+                <span className="text-[9px] uppercase tracking-[0.15em] text-surface/40">Maletas</span>
+              </Link>
+            )}
+
+            {availableCategories.has('carteiras') && (
+              <Link to="/carteiras" className="flex flex-col items-center gap-2 min-w-[60px]">
+                <div className="w-14 h-14 rounded-full bg-secondary/5 flex items-center justify-center border border-secondary/5 glass-card">
+                  <span className="material-symbols-outlined text-secondary/60 text-xl">wallet</span>
+                </div>
+                <span className="text-[9px] uppercase tracking-[0.15em] text-surface/40">Carteiras</span>
+              </Link>
+            )}
+
+            {availableCategories.has('acessorios') && (
+              <Link to="/acessorios" className="flex flex-col items-center gap-2 min-w-[60px]">
+                <div className="w-14 h-14 rounded-full bg-secondary/5 flex items-center justify-center border border-secondary/5 glass-card">
+                  <span className="material-symbols-outlined text-secondary/60 text-xl">diamond</span>
+                </div>
+                <span className="text-[9px] uppercase tracking-[0.15em] text-surface/40">Acessórios</span>
+              </Link>
+            )}
           </div>
         </section>
 
@@ -147,55 +213,43 @@ export default function Home() {
             <Link to="/catalog" className="text-[10px] uppercase tracking-widest text-secondary font-semibold">Descobrir</Link>
           </div>
           <div ref={autoCarouselRef} className="flex overflow-x-auto no-scrollbar gap-5 px-6 pb-2 snap-x snap-mandatory">
-            {/* Kit Card 1 */}
-            <div className="w-[85vw] sm:w-[450px] md:w-[500px] relative rounded-2xl overflow-hidden aspect-[16/10] group shrink-0 snap-center glass-card">
-              <img 
-                className="w-full h-full object-cover" 
-                alt="Kit Heritage Sand" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCp7ZAM9Xl2SArYuMCmGVVBuuBD_2zjqmHJEKLIN0LxHrQnFS0RcENLvUrCL_Zxu9IrVZWRuw0Ac4pP9qA2rAwMeEmi5m28hVb2Xv8MFgX6MnJFTKeJMYhKbROlkKUUwCAmCHg-lcdMxs5FsQrtJijFvbX2i-Bc9YOAOD5xZZ-GxNMAr3CEQ4Mdbonq-IhNtbJtcrsNC7nEJQtCNRikbmsPLItkI94d5ybJ0IiHX3CAR02euN_FJ51uSU12u8oUGk7v6VAgB25Sn3U"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent"></div>
-              <div className="absolute top-4 left-4">
-                <span className="bg-secondary/90 text-primary text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Conjunto Premium</span>
-              </div>
-              <div className="absolute bottom-5 left-5 right-5 flex justify-between items-end">
-                <div>
-                  <h5 className="text-lg font-headline text-surface leading-tight">Kit Heritage Sand</h5>
-                  <p className="text-secondary font-medium">R$ 5.150</p>
+            {loading ? (
+              <div className="w-[85vw] aspect-[16/10] bg-primary/20 rounded-2xl animate-pulse"></div>
+            ) : kits.length > 0 ? kits.map((kit) => (
+              <div key={kit.id} className="w-[85vw] sm:w-[450px] md:w-[500px] relative rounded-2xl overflow-hidden aspect-[16/10] group shrink-0 snap-center glass-card">
+                <Link to={`/product/${kit.id}`}>
+                  <img 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                    alt={kit.name} 
+                    src={kit.image_url || kit.img || 'https://picsum.photos/seed/kit/800/500'}
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent"></div>
+                  <div className="absolute top-4 left-4">
+                    <span className="bg-secondary/90 text-primary text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Conjunto Premium</span>
+                  </div>
+                </Link>
+                <div className="absolute bottom-5 left-5 right-5 flex justify-between items-end">
+                  <Link to={`/product/${kit.id}`}>
+                    <h5 className="text-lg font-headline text-surface leading-tight hover:text-secondary transition-colors">{kit.name}</h5>
+                    <div className="flex items-center gap-2">
+                      <p className="text-secondary font-medium">R$ {(kit.discount && kit.discount > 0 ? kit.discounted_price : kit.sale_price)?.toLocaleString('pt-BR')}</p>
+                      {kit.discount && kit.discount > 0 && (
+                        <p className="text-xs text-surface/40 line-through">R$ {kit.sale_price?.toLocaleString('pt-BR')}</p>
+                      )}
+                    </div>
+                  </Link>
+                  <button 
+                    onClick={() => addItem({ id: kit.id, name: kit.name, price: kit.discount && kit.discount > 0 ? kit.discounted_price : kit.sale_price, image: kit.image_url || kit.img })}
+                    className="bg-surface text-primary w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                  >
+                    <span className="material-symbols-outlined text-lg">shopping_cart</span>
+                  </button>
                 </div>
-                <button 
-                  onClick={() => addItem({ id: 'kit-heritage', name: 'Kit Heritage Sand', price: 5150, image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCp7ZAM9Xl2SArYuMCmGVVBuuBD_2zjqmHJEKLIN0LxHrQnFS0RcENLvUrCL_Zxu9IrVZWRuw0Ac4pP9qA2rAwMeEmi5m28hVb2Xv8MFgX6MnJFTKeJMYhKbROlkKUUwCAmCHg-lcdMxs5FsQrtJijFvbX2i-Bc9YOAOD5xZZ-GxNMAr3CEQ4Mdbonq-IhNtbJtcrsNC7nEJQtCNRikbmsPLItkI94d5ybJ0IiHX3CAR02euN_FJ51uSU12u8oUGk7v6VAgB25Sn3U' })}
-                  className="bg-surface text-primary w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-lg">shopping_cart</span>
-                </button>
               </div>
-            </div>
-
-            {/* Kit Card 2 */}
-            <div className="w-[85vw] sm:w-[450px] md:w-[500px] relative rounded-2xl overflow-hidden aspect-[16/10] group shrink-0 snap-center glass-card">
-              <img 
-                className="w-full h-full object-cover" 
-                alt="Kit Midnight Noir" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmgycPsUyZoduorOf0lH8RinowJaT131ncEaWOiKxj_vNSaHIIDKgAPbm2BqkCyuVf9DwG5Mky-r3n1va8WGoCqfH_uMyCqEOpnVpmq1HYBoOuZiONhj1HOeYPxlJfLqXunzJ-hk0yKp-a4LHnemqPyiajTgeHaYt7S32slxUWQXBFxMcIXUDEuIcefWGcdVbduDR7ufKxb_6sqGjkGUUyGTQRpziqWuQTNR25laCmUclwiboAMMoHiPVUv_DjqfPVxLVFuJBt-QQ"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-transparent to-transparent"></div>
-              <div className="absolute top-4 left-4">
-                <span className="bg-secondary/90 text-primary text-[9px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Conjunto Premium</span>
-              </div>
-              <div className="absolute bottom-5 left-5 right-5 flex justify-between items-end">
-                <div>
-                  <h5 className="text-lg font-headline text-surface leading-tight">Kit Midnight Noir</h5>
-                  <p className="text-secondary font-medium">R$ 4.720</p>
-                </div>
-                <button 
-                  onClick={() => addItem({ id: 'kit-midnight', name: 'Kit Midnight Noir', price: 4720, image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBmgycPsUyZoduorOf0lH8RinowJaT131ncEaWOiKxj_vNSaHIIDKgAPbm2BqkCyuVf9DwG5Mky-r3n1va8WGoCqfH_uMyCqEOpnVpmq1HYBoOuZiONhj1HOeYPxlJfLqXunzJ-hk0yKp-a4LHnemqPyiajTgeHaYt7S32slxUWQXBFxMcIXUDEuIcefWGcdVbduDR7ufKxb_6sqGjkGUUyGTQRpziqWuQTNR25laCmUclwiboAMMoHiPVUv_DjqfPVxLVFuJBt-QQ' })}
-                  className="bg-surface text-primary w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-lg">shopping_cart</span>
-                </button>
-              </div>
-            </div>
+            )) : (
+              <div className="px-6 py-10 text-surface/40 text-xs uppercase tracking-widest italic">Nenhum kit disponível no momento</div>
+            )}
           </div>
         </section>
 
@@ -213,100 +267,44 @@ export default function Home() {
             onMouseMove={handleMouseMove}
             className={`flex overflow-x-auto no-scrollbar gap-4 px-6 pb-4 ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
           >
-            {/* Card 1 */}
-            <div className="group w-[40vw] sm:w-[160px] md:w-[200px] shrink-0">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 glass-card">
-                <img 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                  alt="Bolsa Classic Sand Gold" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCp7ZAM9Xl2SArYuMCmGVVBuuBD_2zjqmHJEKLIN0LxHrQnFS0RcENLvUrCL_Zxu9IrVZWRuw0Ac4pP9qA2rAwMeEmi5m28hVb2Xv8MFgX6MnJFTKeJMYhKbROlkKUUwCAmCHg-lcdMxs5FsQrtJijFvbX2i-Bc9YOAOD5xZZ-GxNMAr3CEQ4Mdbonq-IhNtbJtcrsNC7nEJQtCNRikbmsPLItkI94d5ybJ0IiHX3CAR02euN_FJ51uSU12u8oUGk7v6VAgB25Sn3U"
-                />
-                <button 
-                  onClick={() => addItem({ id: 'bolsa-classic', name: 'Bolsa Classic Sand Gold', price: 4290, image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCp7ZAM9Xl2SArYuMCmGVVBuuBD_2zjqmHJEKLIN0LxHrQnFS0RcENLvUrCL_Zxu9IrVZWRuw0Ac4pP9qA2rAwMeEmi5m28hVb2Xv8MFgX6MnJFTKeJMYhKbROlkKUUwCAmCHg-lcdMxs5FsQrtJijFvbX2i-Bc9YOAOD5xZZ-GxNMAr3CEQ4Mdbonq-IhNtbJtcrsNC7nEJQtCNRikbmsPLItkI94d5ybJ0IiHX3CAR02euN_FJ51uSU12u8oUGk7v6VAgB25Sn3U' })}
-                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-primary/70 backdrop-blur-md flex items-center justify-center text-secondary active:scale-90 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-base">shopping_cart</span>
-                </button>
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="w-[40vw] sm:w-[160px] aspect-[3/4] bg-primary/20 rounded-xl animate-pulse"></div>
+              ))
+            ) : featuredProducts.map((product) => (
+              <div key={product.id} className="group w-[40vw] sm:w-[160px] md:w-[200px] shrink-0">
+                <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 glass-card">
+                  <Link to={`/product/${product.id}`}>
+                    <img 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                      alt={product.name} 
+                      src={product.image_url || product.img || 'https://picsum.photos/seed/product/400/600'}
+                      referrerPolicy="no-referrer"
+                    />
+                  </Link>
+                  {product.discount && product.discount > 0 && (
+                    <div className="absolute top-3 left-3">
+                      <span className="bg-red-800/90 text-white px-2 py-1 text-[8px] tracking-widest uppercase font-bold rounded-sm">{product.discount}% OFF</span>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => addItem({ id: product.id, name: product.name, price: product.sale_price, image: product.image_url || product.img })}
+                    className="absolute top-3 right-3 w-7 h-7 rounded-full bg-primary/70 backdrop-blur-md flex items-center justify-center text-secondary active:scale-90 transition-transform"
+                  >
+                    <span className="material-symbols-outlined text-base">shopping_cart</span>
+                  </button>
+                </div>
+                <Link to={`/product/${product.id}`}>
+                  <h5 className="text-xs text-surface/80 font-medium tracking-tight mb-1 hover:text-secondary transition-colors truncate">{product.name}</h5>
+                  <div className="flex items-center gap-2">
+                    <p className="text-secondary font-headline italic">R$ {(product.discount && product.discount > 0 ? product.discounted_price : product.sale_price)?.toLocaleString('pt-BR')}</p>
+                    {product.discount && product.discount > 0 && (
+                      <p className="text-[10px] text-surface/40 line-through">R$ {product.sale_price?.toLocaleString('pt-BR')}</p>
+                    )}
+                  </div>
+                </Link>
               </div>
-              <h5 className="text-xs text-surface/80 font-medium tracking-tight mb-1">Bolsa Classic Sand Gold</h5>
-              <p className="text-secondary font-headline italic">R$ 4.290</p>
-            </div>
-
-            {/* Card 2 */}
-            <div className="group w-[40vw] sm:w-[160px] md:w-[200px] shrink-0">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 glass-card">
-                <img 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                  alt="Clutch Midnight Noir" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmgycPsUyZoduorOf0lH8RinowJaT131ncEaWOiKxj_vNSaHIIDKgAPbm2BqkCyuVf9DwG5Mky-r3n1va8WGoCqfH_uMyCqEOpnVpmq1HYBoOuZiONhj1HOeYPxlJfLqXunzJ-hk0yKp-a4LHnemqPyiajTgeHaYt7S32slxUWQXBFxMcIXUDEuIcefWGcdVbduDR7ufKxb_6sqGjkGUUyGTQRpziqWuQTNR25laCmUclwiboAMMoHiPVUv_DjqfPVxLVFuJBt-QQ"
-                />
-                <button 
-                  onClick={() => addItem({ id: 'clutch-midnight', name: 'Clutch Midnight Noir', price: 3850, image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBmgycPsUyZoduorOf0lH8RinowJaT131ncEaWOiKxj_vNSaHIIDKgAPbm2BqkCyuVf9DwG5Mky-r3n1va8WGoCqfH_uMyCqEOpnVpmq1HYBoOuZiONhj1HOeYPxlJfLqXunzJ-hk0yKp-a4LHnemqPyiajTgeHaYt7S32slxUWQXBFxMcIXUDEuIcefWGcdVbduDR7ufKxb_6sqGjkGUUyGTQRpziqWuQTNR25laCmUclwiboAMMoHiPVUv_DjqfPVxLVFuJBt-QQ' })}
-                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-primary/70 backdrop-blur-md flex items-center justify-center text-secondary active:scale-90 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-base">shopping_cart</span>
-                </button>
-              </div>
-              <h5 className="text-xs text-surface/80 font-medium tracking-tight mb-1">Clutch Midnight Noir</h5>
-              <p className="text-secondary font-headline italic">R$ 3.850</p>
-            </div>
-            
-            {/* Card 3 - Added to show the carousel better */}
-            <div className="group w-[40vw] sm:w-[160px] md:w-[200px] shrink-0">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 glass-card">
-                <img 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                  alt="Bolsa Elegance" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWri3NFScn3lZvHcgKmcL0GVpXFsR-KYGkeRB45heaoDJfrK-sV1ocU87A4iEEDdYxc_uivoposomPaKj5WP-gMvBlsojMy6roXGBZHaIhuEG6SPpt52ozamlMldoApu_1EwcbWNDVxOz39zgOw0C3fz788RokDIq32GBVwdwFwZO_Lvhn4s1QUSqZot5FDChxNHIArDgJhRxdyInzUHJ52xGiEk0jbJrYBiRGAD_CTugLZQ6ukhFBRCAj7dms0z5nwccSeZ1PsuM"
-                />
-                <button 
-                  onClick={() => addItem({ id: 'bolsa-elegance', name: 'Bolsa Elegance Ouro', price: 5100, image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAWri3NFScn3lZvHcgKmcL0GVpXFsR-KYGkeRB45heaoDJfrK-sV1ocU87A4iEEDdYxc_uivoposomPaKj5WP-gMvBlsojMy6roXGBZHaIhuEG6SPpt52ozamlMldoApu_1EwcbWNDVxOz39zgOw0C3fz788RokDIq32GBVwdwFwZO_Lvhn4s1QUSqZot5FDChxNHIArDgJhRxdyInzUHJ52xGiEk0jbJrYBiRGAD_CTugLZQ6ukhFBRCAj7dms0z5nwccSeZ1PsuM' })}
-                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-primary/70 backdrop-blur-md flex items-center justify-center text-secondary active:scale-90 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-base">shopping_cart</span>
-                </button>
-              </div>
-              <h5 className="text-xs text-surface/80 font-medium tracking-tight mb-1">Bolsa Elegance Ouro</h5>
-              <p className="text-secondary font-headline italic">R$ 5.100</p>
-            </div>
-
-            {/* Card 4 - Added to ensure overflow on desktop */}
-            <div className="group w-[40vw] sm:w-[160px] md:w-[200px] shrink-0">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 glass-card">
-                <img 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                  alt="Mochila Urban" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlDxC3H4NbgCyenQONl6hvhc0_EWPHLUgeiYFbdDGqUHgdQ2e2TtAuTdwdSP_61fLL4HDUmgpljYk16nLuEp6lZIQNuEVxzrwABBNQmDgdNcy7y1bv3q2e6i43l7l82o2zgyESpzM07R4IJ_WK-_csyzhfW-G4J8AA0v3619PIQAi3KFeS2oQFKv0H5L9lVSqRAl9HgzX9MfszU_kywKF3iTE6t8M2puL6BMHxlcy7zqff14cQRsP6wTdSFW7cmUTJQLNEqVYR5yg"
-                />
-                <button 
-                  onClick={() => addItem({ id: 'mochila-urban', name: 'Mochila Urban', price: 3200, image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDlDxC3H4NbgCyenQONl6hvhc0_EWPHLUgeiYFbdDGqUHgdQ2e2TtAuTdwdSP_61fLL4HDUmgpljYk16nLuEp6lZIQNuEVxzrwABBNQmDgdNcy7y1bv3q2e6i43l7l82o2zgyESpzM07R4IJ_WK-_csyzhfW-G4J8AA0v3619PIQAi3KFeS2oQFKv0H5L9lVSqRAl9HgzX9MfszU_kywKF3iTE6t8M2puL6BMHxlcy7zqff14cQRsP6wTdSFW7cmUTJQLNEqVYR5yg' })}
-                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-primary/70 backdrop-blur-md flex items-center justify-center text-secondary active:scale-90 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-base">shopping_cart</span>
-                </button>
-              </div>
-              <h5 className="text-xs text-surface/80 font-medium tracking-tight mb-1">Mochila Urban</h5>
-              <p className="text-secondary font-headline italic">R$ 3.200</p>
-            </div>
-
-            {/* Card 5 - Added to ensure overflow on desktop */}
-            <div className="group w-[40vw] sm:w-[160px] md:w-[200px] shrink-0">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3 glass-card">
-                <img 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                  alt="Carteira Slim" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCp7ZAM9Xl2SArYuMCmGVVBuuBD_2zjqmHJEKLIN0LxHrQnFS0RcENLvUrCL_Zxu9IrVZWRuw0Ac4pP9qA2rAwMeEmi5m28hVb2Xv8MFgX6MnJFTKeJMYhKbROlkKUUwCAmCHg-lcdMxs5FsQrtJijFvbX2i-Bc9YOAOD5xZZ-GxNMAr3CEQ4Mdbonq-IhNtbJtcrsNC7nEJQtCNRikbmsPLItkI94d5ybJ0IiHX3CAR02euN_FJ51uSU12u8oUGk7v6VAgB25Sn3U"
-                />
-                <button 
-                  onClick={() => addItem({ id: 'carteira-slim', name: 'Carteira Slim', price: 1150, image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCp7ZAM9Xl2SArYuMCmGVVBuuBD_2zjqmHJEKLIN0LxHrQnFS0RcENLvUrCL_Zxu9IrVZWRuw0Ac4pP9qA2rAwMeEmi5m28hVb2Xv8MFgX6MnJFTKeJMYhKbROlkKUUwCAmCHg-lcdMxs5FsQrtJijFvbX2i-Bc9YOAOD5xZZ-GxNMAr3CEQ4Mdbonq-IhNtbJtcrsNC7nEJQtCNRikbmsPLItkI94d5ybJ0IiHX3CAR02euN_FJ51uSU12u8oUGk7v6VAgB25Sn3U' })}
-                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-primary/70 backdrop-blur-md flex items-center justify-center text-secondary active:scale-90 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-base">shopping_cart</span>
-                </button>
-              </div>
-              <h5 className="text-xs text-surface/80 font-medium tracking-tight mb-1">Carteira Slim</h5>
-              <p className="text-secondary font-headline italic">R$ 1.150</p>
-            </div>
+            ))}
           </div>
         </section>
       </main>

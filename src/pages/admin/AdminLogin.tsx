@@ -1,14 +1,62 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'sonner';
+import NotificationModal from '../../components/NotificationModal';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error'
+  });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('userRole', 'admin');
-    navigate('/admin/dashboard');
+    
+    if (!email || !password) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Acesso Negado',
+        message: 'Preencha todos os campos para continuar.',
+        type: 'error'
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast.success('Login realizado com sucesso!');
+      navigate('/admin/dashboard');
+    } catch (error: any) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Erro de Acesso',
+        message: error.message || 'E-mail ou senha incorretos. Tente novamente.',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,6 +91,8 @@ export default function AdminLogin() {
             <label className="text-[10px] uppercase tracking-[0.2em] text-surface/60 font-bold ml-1">E-mail</label>
             <input 
               type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-primary/40 backdrop-blur-sm border border-secondary/20 rounded-full py-4 px-6 text-surface focus:outline-none focus:border-secondary transition-colors placeholder:text-surface/40"
               placeholder="admin@vallechic.com"
               required
@@ -54,6 +104,8 @@ export default function AdminLogin() {
             <div className="relative">
               <input 
                 type={showPassword ? "text" : "password"} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-primary/40 backdrop-blur-sm border border-secondary/20 rounded-full py-4 px-6 text-surface focus:outline-none focus:border-secondary transition-colors placeholder:text-surface/40"
                 placeholder="••••••••"
                 required
@@ -71,10 +123,11 @@ export default function AdminLogin() {
           <div className="pt-6">
             <button 
               type="submit" 
-              className="w-full flex items-center justify-center gap-3 bg-secondary text-primary font-bold text-sm uppercase tracking-widest py-5 rounded-full shadow-[0_0_40px_rgba(226,179,32,0.15)] hover:scale-[1.02] hover:shadow-[0_0_50px_rgba(226,179,32,0.25)] transition-all duration-300"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-secondary text-primary font-bold text-sm uppercase tracking-widest py-5 rounded-full shadow-[0_0_40px_rgba(226,179,32,0.15)] hover:scale-[1.02] hover:shadow-[0_0_50px_rgba(226,179,32,0.25)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Entrar
-              <span className="material-symbols-outlined text-lg">arrow_forward</span>
+              {loading ? 'Entrando...' : 'Entrar'}
+              {!loading && <span className="material-symbols-outlined text-lg">arrow_forward</span>}
             </button>
           </div>
         </form>
@@ -82,15 +135,23 @@ export default function AdminLogin() {
 
       {/* Footer */}
       <footer className="w-full pb-8 pt-12 flex flex-col items-center gap-6 z-10">
-        <div className="flex gap-8 text-[10px] font-bold tracking-[0.2em] text-surface/40 uppercase">
-          <Link to="#" className="hover:text-surface/60 transition-colors">Privacy</Link>
-          <Link to="#" className="hover:text-surface/60 transition-colors">Terms</Link>
-          <Link to="#" className="hover:text-surface/60 transition-colors">Contact</Link>
+        <div className="flex gap-8 text-[10px] font-bold tracking-[0.2em] text-surface/60 uppercase">
+          <Link to="#" className="hover:text-surface transition-colors">Privacy</Link>
+          <Link to="#" className="hover:text-surface transition-colors">Terms</Link>
+          <Link to="#" className="hover:text-surface transition-colors">Contact</Link>
         </div>
-        <p className="text-[8px] font-bold tracking-[0.2em] text-surface/40 uppercase">
+        <p className="text-[8px] font-bold tracking-[0.2em] text-surface/60 uppercase">
           © 2024 Vallechic Editorial. All rights reserved.
         </p>
       </footer>
+
+      <NotificationModal 
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+      />
     </div>
   );
 }

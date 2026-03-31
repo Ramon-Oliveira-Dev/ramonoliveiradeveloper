@@ -1,7 +1,9 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,16 +12,31 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { isNavyTheme, toggleTheme } = useTheme();
+  const { signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = location.pathname.startsWith('/admin');
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Sessão encerrada');
+      navigate('/');
+    } catch (error) {
+      toast.error('Erro ao encerrar sessão');
+    }
+  };
 
   const menuItems = isAdmin 
     ? [
         { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
+        { name: 'Nova Venda', path: '/admin/sales/new', icon: 'point_of_sale' },
         { name: 'Produtos', path: '/admin/products', icon: 'shopping_bag' },
         { name: 'Clientes', path: '/admin/clients', icon: 'group' },
         { name: 'Estoque', path: '/admin/inventory', icon: 'inventory_2' },
         { name: 'Finanças', path: '/admin/finances', icon: 'payments' },
+        { name: 'Notificações', path: '/admin/notifications', icon: 'notifications' },
+        { name: 'Logs', path: '/admin/logs', icon: 'terminal' },
       ]
     : [
         { name: 'Início', path: '/home', icon: 'home' },
@@ -51,7 +68,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             className="fixed top-0 left-0 bottom-0 w-[280px] bg-[var(--theme-primary)]/70 backdrop-blur-2xl z-[70] border-r border-secondary/10 flex flex-col"
           >
             <div className="p-8 flex flex-col h-full">
-              <div className="flex items-center justify-between mb-12">
+              <div className="flex items-center justify-between mb-6">
                 <h2 className="font-headline text-2xl font-bold text-surface flex items-center gap-0.5">
                   <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
                   <span className="uppercase italic">VC</span>
@@ -61,7 +78,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </button>
               </div>
 
-              <nav className="flex-1 space-y-3">
+              <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
                 {menuItems.map((item) => (
                   <motion.div
                     key={item.path}
@@ -71,7 +88,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <Link
                       to={item.path}
                       onClick={onClose}
-                      className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group ${
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group ${
                         location.pathname === item.path
                           ? 'bg-secondary text-primary font-bold shadow-lg shadow-secondary/20'
                           : 'text-surface/70 hover:bg-white/5 hover:text-surface'
@@ -85,50 +102,66 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </motion.div>
                 ))}
 
-                <div className="h-px bg-white/5 my-6" />
-
-                <motion.div
-                  whileHover={{ x: 8 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Link
-                    to={isAdmin ? '/home' : '/admin'}
-                    onClick={onClose}
-                    className="flex items-center gap-4 px-5 py-4 rounded-2xl text-surface/70 hover:bg-white/5 hover:text-surface transition-all duration-300 group"
+                {!isAdmin && (
+                  <motion.div
+                    whileHover={{ x: 8 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="mt-2"
                   >
-                    <span className="material-symbols-outlined text-secondary/60 group-hover:scale-110 transition-transform duration-300">
-                      {isAdmin ? 'person' : 'admin_panel_settings'}
-                    </span>
-                    <span className="tracking-widest uppercase text-[10px] font-bold">
-                      {isAdmin ? 'Modo Visitante' : 'Modo Admin'}
-                    </span>
-                  </Link>
-                </motion.div>
+                    <Link
+                      to="/admin"
+                      onClick={onClose}
+                      className="flex items-center gap-4 px-5 py-3 rounded-2xl text-surface/70 hover:bg-white/5 hover:text-surface transition-all duration-300 group"
+                    >
+                      <span className="material-symbols-outlined text-secondary/60 group-hover:scale-110 transition-transform duration-300">
+                        admin_panel_settings
+                      </span>
+                      <span className="tracking-widest uppercase text-[10px] font-bold">
+                        Modo Admin
+                      </span>
+                    </Link>
+                  </motion.div>
+                )}
               </nav>
 
-              <div className="mt-auto pt-8">
-                <div className="flex items-center justify-between p-2 glass-card rounded-xl border border-white/5 max-w-[140px] mx-auto">
-                  <div className="flex flex-col ml-1">
-                    <span className="text-[6px] uppercase tracking-[0.2em] text-surface/40 font-bold mb-0.5">Tema</span>
-                    <span className={`text-[8px] font-bold tracking-wider uppercase ${isNavyTheme ? 'text-blue-400' : 'text-amber-500'}`}>
-                      {isNavyTheme ? 'Navy' : 'Brown'}
-                    </span>
-                  </div>
-                  <button 
+              <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                <motion.div
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <button
                     onClick={toggleTheme}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-500 active:scale-90 shadow-lg ${
-                      isNavyTheme 
-                        ? 'bg-blue-500/20 text-blue-400 shadow-blue-500/20' 
-                        : 'bg-amber-500/20 text-amber-500 shadow-amber-500/20'
-                    }`}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-surface/70 hover:bg-white/5 hover:text-surface transition-all duration-300 group border border-white/5"
                   >
-                    <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    <span className={`material-symbols-outlined transition-transform duration-300 group-hover:scale-110 ${isNavyTheme ? 'text-blue-400' : 'text-amber-500'}`}>
                       {isNavyTheme ? 'dark_mode' : 'light_mode'}
                     </span>
+                    <span className="tracking-widest uppercase text-[10px] font-bold">
+                      {isNavyTheme ? 'Tema Navy' : 'Tema Brown'}
+                    </span>
                   </button>
-                </div>
-                
-                <p className="text-[8px] text-surface/20 uppercase tracking-[0.5em] font-medium text-center mt-8">
+                </motion.div>
+
+                {isAdmin && (
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-rose-400/70 hover:bg-rose-400/5 hover:text-rose-400 transition-all duration-300 group border border-rose-400/10"
+                    >
+                      <span className="material-symbols-outlined text-rose-400/60 group-hover:scale-110 transition-transform duration-300">
+                        logout
+                      </span>
+                      <span className="tracking-widest uppercase text-[10px] font-bold">
+                        Sair do Painel
+                      </span>
+                    </button>
+                  </motion.div>
+                )}
+
+                <p className="text-[8px] text-surface/20 uppercase tracking-[0.5em] font-medium text-center mt-4">
                   © 2026 VALLECHIC
                 </p>
               </div>
